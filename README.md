@@ -363,6 +363,44 @@ spec:
 - TLS termination
 - Name-based virtual hosting
 
+### Headless Services
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-headless
+spec:
+  clusterIP: None   # This makes it a headless service
+  selector:
+    app: myapp
+  ports:
+  - port: 80
+    targetPort: 80
+```
+
+**Key Points about Headless Services:**
+1. **DNS Resolution**:
+   - Returns Pod IPs directly instead of service IP
+   - Each Pod gets a DNS record: `<pod-name>.<service-name>.<namespace>.svc.cluster.local`
+   - Useful for stateful applications needing direct Pod addressing
+
+2. **Common Use Cases**:
+   - StatefulSets requiring stable network identities
+   - Client-side service discovery
+   - Database clusters needing direct pod-to-pod communication
+
+3. **Example with StatefulSet**:
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+spec:
+  serviceName: mysql-headless  # References headless service
+  replicas: 3
+  // ... rest of StatefulSet spec ...
+```
+
 ## Storage
 
 ### Volumes & VolumeMounts
