@@ -98,6 +98,13 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 20
           failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
@@ -127,6 +134,11 @@ spec:
 - Manages ReplicaSets
 - Handles rolling updates
 - Maintains desired state
+
+**Probes:**
+- Readiness: Ensures pod is ready to receive traffic
+- Liveness: Restarts container if it fails
+- Startup: Ensures container is ready to start
 
 **Resource Properties Explained:**
 - `requests`: Minimum resources guaranteed to the container
