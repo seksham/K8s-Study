@@ -50,22 +50,92 @@ kind: Deployment
 metadata:
   name: myapp
 spec:
-  replicas: 3  # Number of pod copies to maintain
-  selector:    # Tells deployment which pods to manage
+  replicas: 3
+  selector:
     matchLabels:
-      app: myapp  # Must match template.metadata.labels
-  template:     # Pod template - defines pod configuration
+      app: myapp
+  template:
     metadata:
-      labels:   # These labels must match selector.matchLabels
+      labels:
         app: myapp
     spec:
-      containers:  # List of containers in the pod
+      securityContext:           # Pod-level security settings
+        runAsNonRoot: true      # Ensures no container runs as root
+        fsGroup: 2000           # Sets filesystem group for all containers
+      containers:
       - name: myapp
         image: nginx:latest
+        securityContext:         # Container-level security settings
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsUser: 1000       # Run as UID 1000
+          runAsGroup: 3000      # Run as GID 3000
+          capabilities:
+            drop: ["ALL"]       # Drop all capabilities
+            add: ["NET_BIND_SERVICE"]  # Only add required capabilities
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        volumeMounts:           # Required when using readOnlyRootFilesystem
+        - name: tmp-volume      # For temporary files
+          mountPath: /tmp
+        - name: var-run
+          mountPath: /var/run
+      volumes:                  # Define writable volumes
+      - name: tmp-volume
+        emptyDir: {}
+      - name: var-run
+        emptyDir: {}
 ```
 - Manages ReplicaSets
 - Handles rolling updates
 - Maintains desired state
+
+**Resource Properties Explained:**
+- `requests`: Minimum resources guaranteed to the container
+  - Used by scheduler to find suitable nodes
+  - Important for proper pod placement
+  - Should reflect actual application needs
+
+- `limits`: Maximum resources the container can use
+  - Container will be throttled if exceeding CPU limit
+  - Container will be OOM killed if exceeding memory limit
+  - Should be set to prevent resource hogging
+
+- CPU Units:
+  - Expressed in cores or millicores
+  - "1" = 1 CPU core
+  - "500m" = 500 millicores = 0.5 CPU core
+  - "250m" = 250 millicores = 0.25 CPU core
+
+- Memory Units:
+  - Expressed in bytes: Ki, Mi, Gi
+  - "64Mi" = 64 Mebibytes
+  - "1Gi" = 1 Gibibyte
+  - Can also use K, M, G (decimal) units
+
+**Security Context Properties Explained:**
+- Pod-level security (applies to all containers):
+  - `runAsNonRoot`: Prevents containers from running as root
+  - `fsGroup`: Sets the group ID for mounted volumes
+
+- Container-level security:
+  - `readOnlyRootFilesystem`: Makes root filesystem read-only
+  - `runAsUser`: Specifies the UID to run the container
+  - `runAsGroup`: Specifies the GID to run the container
+  - `allowPrivilegeEscalation`: Controls if process can gain more privileges
+  - `capabilities`: Fine-grained Linux capabilities control
+    - `drop: ["ALL"]`: Removes all capabilities for security
+    - `add: []`: Only add specific required capabilities
+
+**Note:** When using `readOnlyRootFilesystem: true`, you need to:
+1. Mount emptyDir volumes for directories requiring write access (e.g., /tmp)
+2. Configure your application to use these writable mounts
+3. Ensure all required directories are either read-only or mounted as volumes
 
 ### StatefulSets
 ```yaml
