@@ -760,6 +760,70 @@ Common RBAC Verbs:
 - `delete`: Delete resources
 - `deletecollection`: Delete collection of resources
 
+### Labels vs Annotations
+
+#### Labels
+```yaml
+metadata:
+  labels:
+    app: myapp
+    environment: production
+    tier: frontend
+```
+- Used for object selection/grouping
+- Used by controllers and services
+- Should be kept minimal and relevant for identification
+- Limited to 63 characters (alphanumeric, `-`, `_`, `.`)
+
+#### Annotations
+```yaml
+metadata:
+  annotations:
+    kubernetes.io/ingress-bandwidth: "1M"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    deployment.kubernetes.io/revision: "2"
+    builder: "john@example.com"
+    gitCommit: "abc123"
+    buildDate: "2024-03-20"
+```
+- Store non-identifying auxiliary data
+- Can contain arbitrary metadata
+- Not used for selection
+- Can contain large data blocks
+- Common uses:
+  - Build/release information
+  - Logging/monitoring configurations
+  - Tool configurations
+  - Update timestamps
+  - Client library/tool information
+  - Contact information
+
+**Key Differences:**
+1. **Purpose**
+   - Labels: Identifying and selecting objects
+   - Annotations: Non-identifying metadata and tool configurations
+
+2. **Usage**
+   - Labels: Used by Kubernetes core functionality
+   - Annotations: Used by tools and libraries
+
+3. **Constraints**
+   - Labels: Strict character set and size limits
+   - Annotations: Can contain any metadata
+
+4. **Examples Use Cases**
+   Labels:
+   - Service selector matching
+   - Resource grouping
+   - Batch operations
+   
+   Annotations:
+   - Ingress configurations
+   - Prometheus scraping settings
+   - Deployment rollout information
+   - CI/CD metadata
+
 ## Scheduling & Placement
 
 ### Node Selectors
