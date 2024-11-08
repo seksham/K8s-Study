@@ -346,6 +346,9 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: myapp-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /    # Nginx-specific annotation
+    nginx.ingress.kubernetes.io/ssl-redirect: "false" # Disable SSL redirect
 spec:
   rules:
   - host: myapp.example.com  # External hostname
@@ -362,6 +365,47 @@ spec:
 - L7 load balancing
 - TLS termination
 - Name-based virtual hosting
+
+**Installing Ingress Controller:**
+
+1. **Minikube Option (Easiest for Local Development):**
+```bash
+# Enable the Ingress addon
+minikube addons enable ingress
+
+# Verify it's running
+minikube addons list | grep ingress
+kubectl get pods -n ingress-nginx
+
+# Get Minikube IP for testing
+minikube ip
+
+# Add to /etc/hosts for local testing
+echo "$(minikube ip) myapp.example.com" | sudo tee -a /etc/hosts
+```
+
+2. **Helm Option (Production):**
+```bash
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+helm install nginx-ingress ingress-nginx/ingress-nginx
+```
+
+3. **kubectl Option:**
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
+```
+
+**Key Points:**
+- Ingress requires an Ingress Controller to work
+- For local development, Minikube's addon is the simplest option
+- Controller creates an actual load balancer (or uses NodePort in Minikube)
+- Annotations control Nginx-specific behavior
+- Verify controller is running:
+```bash
+kubectl get pods -n ingress-nginx
+kubectl get services -n ingress-nginx
+```
 
 ### Headless Services
 ```yaml
