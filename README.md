@@ -3,13 +3,32 @@
 # Kubernetes Revision Guide for Developers
 
 ## Table of Contents
-- [Core Architecture](#core-architecture)
-- [Workload Resources](#workload-resources)
-- [Scheduling & Placement](#scheduling--placement)
-- [Networking](#networking)
-- [Storage](#storage)
-- [Extensions & Custom Resources](#extensions--custom-resources)
-- [Developer Tools & Troubleshooting](#developer-tools--troubleshooting)
+1. [Core Architecture](#core-architecture)
+   - Understanding the fundamental components and how they work together
+   
+2. [Workload Resources](#workload-resources)
+   - Core resources for running applications (Pods, Deployments, etc.)
+   
+3. [Networking](#networking)
+   - How components communicate and expose services
+   
+4. [Storage](#storage)
+   - Understanding how to persist and manage data
+   
+5. [Configuration](#configuration)
+   - Basic configuration concepts needed for all resources
+   
+6. [Security](#security)
+   - RBAC, SecurityContext, and other security concepts
+   
+7. [Scheduling & Placement](#scheduling--placement)
+   - Advanced control over where and how pods run
+   
+8. [Extensions & Custom Resources](#extensions--custom-resources)
+   - Extending Kubernetes functionality
+   
+9. [Developer Tools & Troubleshooting](#developer-tools--troubleshooting)
+   - Day-to-day development and debugging tools
 
 ## Core Architecture
 - **Control Plane** (Master Components)
@@ -196,67 +215,6 @@ spec:
 - Runs one pod per node
 - Used for node-level operations
 - Common for logging/monitoring
-
-## Scheduling & Placement
-
-### Node Selectors
-```yaml
-spec:
-  nodeSelector:
-    disk: ssd
-```
-- Simple node selection
-- Based on node labels
-
-### Node Affinity/Anti-Affinity
-```yaml
-spec:
-  affinity:
-    nodeAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        nodeSelectorTerms:
-        - matchExpressions:
-          - key: zone
-            operator: In
-            values:
-            - zone1
-```
-- More expressive than nodeSelector
-- Supports complex matching
-- Can be required or preferred
-
-### Pod Affinity/Anti-Affinity
-```yaml
-spec:
-  affinity:
-    podAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchExpressions:
-          - key: app
-            operator: In
-            values:
-            - cache
-        topologyKey: kubernetes.io/hostname
-```
-- Schedule pods relative to other pods
-- Based on topology domains
-
-### Taints & Tolerations
-```yaml
-# Node Taint
-kubectl taint nodes node1 key=value:NoSchedule
-
-# Pod Toleration
-spec:
-  tolerations:
-  - key: "key"
-    operator: "Equal"
-    value: "value"
-    effect: "NoSchedule"
-```
-- Taints prevent pod scheduling on nodes
-- Tolerations allow pods on tainted nodes
 
 ## Networking
 
@@ -579,6 +537,251 @@ kubectl get events --field-selector involvedObject.name=<pvc-name>
    - Consider volume expansion requirements
    - Use appropriate access modes
    - Implement proper backup strategies
+
+## Configuration
+
+### ConfigMaps
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  # Simple key-value pairs
+  DATABASE_URL: "mysql://db:3306/myapp"
+  API_KEY: "development-key"
+  
+  # File-like keys
+  config.json: |
+    {
+      "environment": "development",
+      "features": {
+        "flag1": true,
+        "flag2": false
+      }
+    }
+  nginx.conf: |
+    server {
+      listen 80;
+      server_name example.com;
+    }
+```
+
+Using ConfigMaps:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+spec:
+  containers:
+  - name: myapp
+    image: myapp:1.0
+    # As environment variables
+    envFrom:
+    - configMapRef:
+        name: app-config
+    # Individual values
+    env:
+    - name: DB_URL
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: DATABASE_URL
+    # As files
+    volumeMounts:
+    - name: config-volume
+      mountPath: /etc/config
+  volumes:
+  - name: config-volume
+    configMap:
+      name: app-config
+```
+
+### Secrets
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+type: Opaque
+data:
+  # Values must be base64 encoded
+  username: YWRtaW4=  # 'admin'
+  password: cGFzc3dvcmQxMjM=  # 'password123'
+stringData:
+  # Values in stringData are automatically encoded
+  API_KEY: "my-actual-api-key"
+```
+
+Using Secrets:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+spec:
+  containers:
+  - name: myapp
+    image: myapp:1.0
+    # As environment variables
+    envFrom:
+    - secretRef:
+        name: app-secrets
+    # Individual values
+    env:
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: password
+    # As files
+    volumeMounts:
+    - name: secrets-volume
+      mountPath: /etc/secrets
+      readOnly: true
+  volumes:
+  - name: secrets-volume
+    secret:
+      secretName: app-secrets
+```
+
+### RBAC (Role-Based Access Control)
+
+#### ClusterRole
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pod-reader
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list"]
+```
+
+#### Role (Namespace-scoped)
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default
+  name: pod-reader
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
+```
+
+#### ClusterRoleBinding
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: read-pods-global
+subjects:
+- kind: User
+  name: jane
+  apiGroup: rbac.authorization.k8s.io
+- kind: ServiceAccount
+  name: default
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
+```
+
+#### RoleBinding (Namespace-scoped)
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: read-pods
+  namespace: default
+subjects:
+- kind: User
+  name: jane
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
+```
+
+Common RBAC Verbs:
+- `get`: Read a resource
+- `list`: List resources
+- `watch`: Watch for changes
+- `create`: Create resources
+- `update`: Modify existing resources
+- `patch`: Partially modify resources
+- `delete`: Delete resources
+- `deletecollection`: Delete collection of resources
+
+## Scheduling & Placement
+
+### Node Selectors
+```yaml
+spec:
+  nodeSelector:
+    disk: ssd
+```
+- Simple node selection
+- Based on node labels
+
+### Node Affinity/Anti-Affinity
+```yaml
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: zone
+            operator: In
+            values:
+            - zone1
+```
+- More expressive than nodeSelector
+- Supports complex matching
+- Can be required or preferred
+
+### Pod Affinity/Anti-Affinity
+```yaml
+spec:
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - cache
+        topologyKey: kubernetes.io/hostname
+```
+- Schedule pods relative to other pods
+- Based on topology domains
+
+### Taints & Tolerations
+```yaml
+# Node Taint
+kubectl taint nodes node1 key=value:NoSchedule
+
+# Pod Toleration
+spec:
+  tolerations:
+  - key: "key"
+    operator: "Equal"
+    value: "value"
+    effect: "NoSchedule"
+```
+- Taints prevent pod scheduling on nodes
+- Tolerations allow pods on tainted nodes
 
 ## Extensions & Custom Resources
 
