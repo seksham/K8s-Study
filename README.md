@@ -50,16 +50,16 @@ kind: Deployment
 metadata:
   name: myapp
 spec:
-  replicas: 3
-  selector:
+  replicas: 3  # Number of pod copies to maintain
+  selector:    # Tells deployment which pods to manage
     matchLabels:
-      app: myapp
-  template:
+      app: myapp  # Must match template.metadata.labels
+  template:     # Pod template - defines pod configuration
     metadata:
-      labels:
+      labels:   # These labels must match selector.matchLabels
         app: myapp
     spec:
-      containers:
+      containers:  # List of containers in the pod
       - name: myapp
         image: nginx:latest
 ```
@@ -74,25 +74,25 @@ kind: StatefulSet
 metadata:
   name: mydb
 spec:
-  serviceName: mydb
+  serviceName: mydb  # Headless service for network identity
   replicas: 3
-  selector:
+  selector:          # Must match template labels, like in Deployments
     matchLabels:
       app: mydb
   template:
     metadata:
-      labels:
+      labels:        # Must match selector.matchLabels
         app: mydb
     spec:
       containers:
       - name: mydb
         image: mysql:5.7
-        volumeMounts:
-        - name: data
+        volumeMounts:        # References volumes defined below
+        - name: data        # Must match volume name in volumeClaimTemplates
           mountPath: /var/lib/mysql
-  volumeClaimTemplates:
+  volumeClaimTemplates:     # Creates PVC for each pod
   - metadata:
-      name: data
+      name: data           # Referenced by volumeMounts.name above
     spec:
       accessModes: ["ReadWriteOnce"]
       resources:
@@ -301,12 +301,12 @@ kind: Service
 metadata:
   name: myapp-service
 spec:
-  type: ClusterIP  # or LoadBalancer/NodePort
-  selector:
-    app: myapp
+  type: ClusterIP  # Determines service exposure level
+  selector:        # Finds pods to send traffic to
+    app: myapp    # Must match pod labels
   ports:
-  - port: 80
-    targetPort: 8080
+  - port: 80       # Port exposed by the service
+    targetPort: 8080  # Port on the pod to forward to
 ```
 - Types: ClusterIP, NodePort, LoadBalancer
 - Service discovery and load balancing
@@ -320,16 +320,16 @@ metadata:
   name: myapp-ingress
 spec:
   rules:
-  - host: myapp.example.com
+  - host: myapp.example.com  # External hostname
     http:
       paths:
-      - path: /
+      - path: /             # URL path to match
         pathType: Prefix
         backend:
           service:
-            name: myapp-service
+            name: myapp-service  # Must match existing Service name
             port:
-              number: 80
+              number: 80        # Must match Service port
 ```
 - L7 load balancing
 - TLS termination
@@ -347,18 +347,18 @@ spec:
   containers:
   - name: myapp
     image: nginx
-    volumeMounts:
-    - name: config-volume
+    volumeMounts:           # References volumes defined below
+    - name: config-volume   # Must match volume name
       mountPath: /etc/config
-    - name: data-volume
+    - name: data-volume    # Must match volume name
       mountPath: /data
-  volumes:
-  - name: config-volume
+  volumes:                 # Volume definitions
+  - name: config-volume    # Referenced by volumeMounts.name
     configMap:
-      name: app-config
-  - name: data-volume
+      name: app-config    # Must match existing ConfigMap name
+  - name: data-volume     # Referenced by volumeMounts.name
     persistentVolumeClaim:
-      claimName: myapp-pvc
+      claimName: myapp-pvc  # Must match existing PVC name
 ```
 - Types: emptyDir, hostPath, configMap, secret, persistentVolumeClaim
 - Lifecycle tied to pod
