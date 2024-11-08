@@ -3,15 +3,15 @@
 # Kubernetes Revision Guide for Developers
 
 ## Table of Contents
-1. [Chapter 1: Core Architecture](#chapter-1-core-architecture)
-2. [Chapter 2: Workload Resources](#chapter-2-workload-resources)
-3. [Chapter 3: Scheduling & Placement](#chapter-3-scheduling--placement)
-4. [Chapter 4: Networking](#chapter-4-networking)
-5. [Chapter 5: Storage](#chapter-5-storage)
-6. [Chapter 6: Extensions & Custom Resources](#chapter-6-extensions--custom-resources)
-7. [Chapter 7: Developer Tools & Troubleshooting](#chapter-7-developer-tools--troubleshooting)
+- [Core Architecture](#core-architecture)
+- [Workload Resources](#workload-resources)
+- [Scheduling & Placement](#scheduling--placement)
+- [Networking](#networking)
+- [Storage](#storage)
+- [Extensions & Custom Resources](#extensions--custom-resources)
+- [Developer Tools & Troubleshooting](#developer-tools--troubleshooting)
 
-## Chapter 1: Core Architecture
+## Core Architecture
 - **Control Plane** (Master Components)
   - `api-server`: API entry point for all operations
   - `etcd`: Distributed key-value store for cluster state
@@ -24,7 +24,7 @@
   - `kube-proxy`: Network proxy, handles service networking
   - `container-runtime`: (Docker/containerd) Runs containers
 
-## Chapter 2: Workload Resources
+## Workload Resources
 
 ### Pods
 ```yaml
@@ -127,7 +127,7 @@ spec:
 - Used for node-level operations
 - Common for logging/monitoring
 
-## Chapter 3: Scheduling & Placement
+## Scheduling & Placement
 
 ### Node Selectors
 ```yaml
@@ -188,7 +188,7 @@ spec:
 - Taints prevent pod scheduling on nodes
 - Tolerations allow pods on tainted nodes
 
-## Chapter 4: Networking
+## Networking
 
 ### Services & Pod Connection
 Services use label selectors to find and route traffic to pods. The relationship works as follows:
@@ -335,7 +335,7 @@ spec:
 - TLS termination
 - Name-based virtual hosting
 
-## Chapter 5: Storage
+## Storage
 
 ### Volumes & VolumeMounts
 ```yaml
@@ -510,7 +510,7 @@ kubectl get events --field-selector involvedObject.name=<pvc-name>
    - Use appropriate access modes
    - Implement proper backup strategies
 
-## Chapter 6: Extensions & Custom Resources
+## Extensions & Custom Resources
 
 ### Custom Resource Definitions (CRDs)
 ```yaml
@@ -538,7 +538,7 @@ spec:
 - Built using CRDs and controllers
 - Handle application-specific logic
 
-## Chapter 7: Developer Tools & Troubleshooting
+## Developer Tools & Troubleshooting
 
 ### Common Commands
 ```bash
